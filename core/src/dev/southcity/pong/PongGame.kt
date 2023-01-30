@@ -1,6 +1,7 @@
 package dev.southcity.pong
 
 import com.badlogic.gdx.Game
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.BitmapFont
@@ -31,7 +32,7 @@ class PongGame : Game() {
     override fun create() {
         shapeRenderer = ShapeRenderer()
         batch = SpriteBatch()
-        font = BitmapFont()
+        font = BitmapFont(Gdx.files.internal("minecraft.fnt"), false)
         camera = OrthographicCamera()
         camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT)
 
