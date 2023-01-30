@@ -3,6 +3,7 @@ package dev.southcity.pong.screens
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.ScreenUtils
@@ -27,9 +28,14 @@ class PlayScreen(private val game: PongGame) : Screen {
             ball.y - paddle.centerY(),
         ).setLength(1f)
 
+        val inboundDirection = Vector2(
+            ball.velocity.x,
+            ball.velocity.y,
+        ).setLength(1f)
+
         while (ball.overlaps(paddle)) {
-            ball.x += collisionVec.x
-            ball.y += collisionVec.y
+            ball.x += inboundDirection.x * -1
+            ball.y += inboundDirection.y * -1
         }
 
         val oldSpeed = ball.velocity.len()
@@ -85,8 +91,10 @@ class PlayScreen(private val game: PongGame) : Screen {
         game.batch.begin()
         game.batch.projectionMatrix = game.camera.combined
         game.font.data.setScale(2f)
-        game.font.draw(game.batch, playerScore.toString(), SCREEN_WIDTH / 4, SCREEN_HEIGHT / 2)
-        game.font.draw(game.batch, opponentScore.toString(), SCREEN_WIDTH / 4 * 3, SCREEN_HEIGHT / 2)
+        val layout = GlyphLayout(game.font, playerScore.toString())
+        game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
+        layout.setText(game.font, opponentScore.toString())
+        game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 * 3 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
         game.batch.end()
 
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
