@@ -1,30 +1,33 @@
 package dev.southcity.pong
 
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.physics.box2d.*
+import kotlin.random.Random
 
-const val BALL_RADIUS: Float = 16f
+class Ball : Rectangle(SCREEN_WIDTH / 2 - BALL_SIZE / 2, SCREEN_HEIGHT / 2 - BALL_SIZE / 2, BALL_SIZE, BALL_SIZE) {
+    var velocity: Vector2 = Vector2(
+        Random.nextFloat() - 0.5f,
+        Random.nextFloat() - 0.5f,
+    ).setLength(BALL_SPEED)
 
-class Ball(world: World, x: Float, y: Float) {
-    val body: Body
+    var timeAlive: Float = 0f
 
-    init {
-        val bodyDef = BodyDef()
-        bodyDef.type = BodyDef.BodyType.DynamicBody
-        bodyDef.position.set(x, y)
+    fun update(delta: Float) {
+        timeAlive += delta
 
-        body = world.createBody(bodyDef)
+        velocity.setLength(velocity.len() + timeAlive * BALL_SPEED_MODIFIER)
 
-        val shape = CircleShape()
-        shape.radius = BALL_RADIUS
+        x += velocity.x * delta
+        y += velocity.y * delta
 
-        val fixtureDef = FixtureDef()
-        fixtureDef.shape = shape
-        fixtureDef.friction = 0f
-        fixtureDef.restitution = 1f // our ball should not lose speed on collision
+        if (y < 0f || y > SCREEN_HEIGHT - BALL_SIZE) {
+            y = y.coerceIn(0f, SCREEN_HEIGHT - BALL_SIZE)
+            velocity.y *= -1
+        }
+    }
 
-        body.createFixture(fixtureDef)
-
-        body.linearVelocity = Vector2(-48f, -64f)
+    fun draw(shapeRenderer: ShapeRenderer) {
+        shapeRenderer.rect(x, y, width, height)
     }
 }

@@ -2,66 +2,102 @@ package dev.southcity.pong
 
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.physics.box2d.Body
-import com.badlogic.gdx.physics.box2d.BodyDef
-import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer
-import com.badlogic.gdx.physics.box2d.EdgeShape
-import com.badlogic.gdx.physics.box2d.World
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType
 import com.badlogic.gdx.utils.ScreenUtils
 
 const val SCREEN_WIDTH: Float = 640f
 const val SCREEN_HEIGHT: Float = SCREEN_WIDTH * 9 / 16
 
+const val BALL_SIZE: Float = 16f
+const val BALL_SPEED: Float = 172f
+const val BALL_SPEED_MODIFIER: Float = 0.001f
+
+const val PADDLE_WIDTH: Float = BALL_SIZE
+const val PADDLE_HEIGHT: Float = 4 * BALL_SIZE
+const val PADDLE_MARGIN: Float = PADDLE_WIDTH
+
 class Pong : ApplicationAdapter() {
     lateinit var shapeRenderer: ShapeRenderer
+    lateinit var batch: Batch
+    lateinit var font: BitmapFont
     lateinit var camera: OrthographicCamera
-    lateinit var playerPaddle: PlayerPaddle
-    lateinit var botPaddle: BotPaddle
+
     lateinit var ball: Ball
-    lateinit var world: World
-    lateinit var edges: Body
-    lateinit var debugRenderer: Box2DDebugRenderer
+    lateinit var playerPaddle: TouchPaddle
+    lateinit var opponentPaddle: BotPaddle
+
+    var playerScore = 0
+    var opponentScore = 0
 
     override fun create() {
         shapeRenderer = ShapeRenderer()
+        batch = SpriteBatch()
+        font = BitmapFont()
         camera = OrthographicCamera()
         camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT)
-        world = World(Vector2.Zero, true)
-        debugRenderer = Box2DDebugRenderer()
-        ball = Ball(world, SCREEN_WIDTH / 2f, SCREEN_HEIGHT / 2f)
-        playerPaddle = PlayerPaddle(world, 32f, SCREEN_HEIGHT / 2f, camera)
-        botPaddle = BotPaddle(world, SCREEN_WIDTH - 32f, SCREEN_HEIGHT / 2f, camera, ball)
 
-        val edgeBodyDef = BodyDef()
-        edgeBodyDef.type = BodyDef.BodyType.StaticBody
-        edgeBodyDef.position.set(0f, 0f)
+        playerPaddle = TouchPaddle(camera)
+        opponentPaddle = BotPaddle()
 
-        edges =  world.createBody(edgeBodyDef)
+        spawnBall()
+    }
 
-        val edge = EdgeShape()
-        edge.set(0f, 0f, SCREEN_WIDTH, 0f)
-        edges.createFixture(edge, 0f)
-        edge.set(0f, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT)
-        edges.createFixture(edge, 0f)
-        edge.dispose()
+    fun spawnBall() {
+        ball = Ball()
+        opponentPaddle.trackBall(ball)
+    }
+
+    fun update(delta: Float) {
+        ball.update(delta)
+        playerPaddle.update(delta)
+        opponentPaddle.update(delta)
+
+        if (playerPaddle.overlaps(ball)) {
+            ball.x = playerPaddle.x + playerPaddle.width
+            ball.velocity.x *= -1
+        }
+
+        if (opponentPaddle.overlaps(ball)) {
+            ball.x = opponentPaddle.x - ball.width
+            ball.velocity.x *= -1
+        }
+
+        if (ball.x < -ball.width) {
+            opponentScore++
+            spawnBall()
+        }
+
+        if (ball.x > SCREEN_WIDTH) {
+            playerScore++
+            spawnBall()
+        }
     }
 
     override fun render() {
-        playerPaddle.update()
-        botPaddle.update()
-        world.step(1f / 60f, 6, 2)
+        val delta = Gdx.graphics.deltaTime
 
+        update(delta)
+
+        ScreenUtils.clear(Color.BLACK)
+
+        batch.begin()
+        batch.projectionMatrix = camera.combined
+        font.data.setScale(2f)
+        font.draw(batch, playerScore.toString(), SCREEN_WIDTH / 4, SCREEN_HEIGHT / 2)
+        font.draw(batch, opponentScore.toString(), SCREEN_WIDTH / 4 * 3, SCREEN_HEIGHT / 2)
+        batch.end()
+
+        shapeRenderer.begin(ShapeType.Filled)
         shapeRenderer.projectionMatrix = camera.combined
-
-        ScreenUtils.clear(0f, 0f, 0f, 1f)
-        debugRenderer.render(world, camera.combined)
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        //playerPaddle.draw(shapeRenderer)
-        //ball.draw(shapeRenderer)
+        ball.draw(shapeRenderer)
+        playerPaddle.draw(shapeRenderer)
+        opponentPaddle.draw(shapeRenderer)
         shapeRenderer.end()
     }
 
