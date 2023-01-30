@@ -8,8 +8,8 @@ import kotlin.random.Random
 
 class Ball : Rectangle(SCREEN_WIDTH / 2 - BALL_SIZE / 2, SCREEN_HEIGHT / 2 - BALL_SIZE / 2, BALL_SIZE, BALL_SIZE) {
     var velocity: Vector2 = Vector2(
-        Random.nextFloat() - 0.5f,
-        Random.nextFloat() - 0.5f,
+        Random.nextInt().toFloat() * if (Random.nextBoolean()) 1 else -1,
+        Random.nextInt().toFloat() * 0.5f * if (Random.nextBoolean()) 1 else -1,
     ).setLength(BALL_SPEED)
 
     var timeAlive: Float = 0f
