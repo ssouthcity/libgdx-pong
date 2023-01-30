@@ -6,6 +6,10 @@ import com.badlogic.gdx.math.Rectangle
 abstract class Paddle(x: Float, y: Float) : Rectangle(x, y, PADDLE_WIDTH, PADDLE_HEIGHT) {
     abstract fun update(delta: Float)
 
+    fun centerX(): Float {
+        return x + width / 2
+    }
+
     fun centerY(): Float {
         return y + height / 2
     }
