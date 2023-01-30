@@ -32,11 +32,11 @@ class PlayScreen(private val game: PongGame) : Screen {
             ball.y += collisionVec.y
         }
 
-        collisionVec.setLength(ball.velocity.len())
+        val oldSpeed = ball.velocity.len()
 
+        collisionVec.setLength(oldSpeed)
         ball.velocity.x *= -1
-
-        ball.velocity = ball.velocity.lerp(collisionVec, 0.5f)
+        ball.velocity = ball.velocity.lerp(collisionVec, 0.5f).setLength(oldSpeed)
     }
 
     private fun update(delta: Float) {
