@@ -84,8 +84,6 @@ class PlayScreen(private val game: PongGame) : Screen {
     }
 
     override fun render(delta: Float) {
-        val delta = Gdx.graphics.deltaTime
-
         update(delta)
 
         ScreenUtils.clear(Color.BLACK)
