@@ -8,7 +8,6 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.physics.box2d.BodyDef
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer
 import com.badlogic.gdx.physics.box2d.EdgeShape
-import com.badlogic.gdx.physics.box2d.FixtureDef
 import com.badlogic.gdx.physics.box2d.World
 import com.badlogic.gdx.utils.ScreenUtils
 import dev.southcity.pong.*
@@ -21,7 +20,7 @@ class PlayScreen(private val game: PongGame) : Screen {
 
     private val ball = Ball(world)
 
-    private val playerPaddle = TouchPaddle(world, game.camera)
+    private val playerPaddle = TouchPaddle(world)
 
     private val opponentPaddle = BotPaddle(world)
 
@@ -86,7 +85,7 @@ class PlayScreen(private val game: PongGame) : Screen {
         val layout = GlyphLayout(game.font, "")
 
         game.batch.begin()
-        game.batch.projectionMatrix = game.camera.combined
+        game.batch.projectionMatrix = Cameras.Game.combined
         game.font.data.setScale(2f)
         layout.setText(game.font, playerScore.toString())
         game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
@@ -96,13 +95,13 @@ class PlayScreen(private val game: PongGame) : Screen {
 
 
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        game.shapeRenderer.projectionMatrix = game.camera.combined
+        game.shapeRenderer.projectionMatrix = Cameras.Game.combined
         ball.draw(game.shapeRenderer)
         playerPaddle.draw(game.shapeRenderer)
         opponentPaddle.draw(game.shapeRenderer)
         game.shapeRenderer.end()
 
-        b2dr.render(world, game.camera.combined.cpy().scale(PPM, PPM, 1f))
+        b2dr.render(world, Cameras.Box2DDebug.combined)
     }
 
     override fun dispose() {

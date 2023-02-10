@@ -2,13 +2,11 @@ package dev.southcity.pong
 
 import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import dev.southcity.pong.screens.IntermediaryScreen
-import dev.southcity.pong.screens.PlayScreen
 
 const val SCREEN_WIDTH: Float = 640f
 const val SCREEN_HEIGHT: Float = SCREEN_WIDTH * 9 / 16
@@ -34,21 +32,17 @@ class PongGame : Game() {
     lateinit var shapeRenderer: ShapeRenderer
     lateinit var batch: Batch
     lateinit var font: BitmapFont
-    lateinit var camera: OrthographicCamera
 
     override fun create() {
         shapeRenderer = ShapeRenderer()
         batch = SpriteBatch()
         font = BitmapFont(Gdx.files.internal("minecraft.fnt"), false)
-        camera = OrthographicCamera()
-        camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT)
-
         setScreen(IntermediaryScreen(this, "Pong!"))
     }
 
     override fun render() {
-        shapeRenderer.projectionMatrix = camera.combined
-        batch.projectionMatrix = camera.combined
+        shapeRenderer.projectionMatrix = Cameras.Game.combined
+        batch.projectionMatrix = Cameras.Game.combined
 
         super.render()
     }
