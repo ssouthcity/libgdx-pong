@@ -3,19 +3,29 @@ package dev.southcity.pong
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.physics.box2d.Body
+import com.badlogic.gdx.physics.box2d.World
 import kotlin.math.absoluteValue
 
-const val TOUCH_PADDLE_SPEED = 128f
+class TouchPaddle(world: World, private val camera: OrthographicCamera) : Paddle(world) {
 
-class TouchPaddle(private val camera: OrthographicCamera) : Paddle(PADDLE_MARGIN, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2) {
+    init {
+        body.setTransform(PADDLE_MARGIN / PPM, SCREEN_HEIGHT / 2 / PPM, 0f)
+    }
+
     override fun update(delta: Float) {
         if (Gdx.input.isTouched) {
-            val touchY = camera.unproject(Vector3(0f, Gdx.input.y.toFloat(), 0f)).y
+            val touch = camera.unproject(Vector3(0f, Gdx.input.y.toFloat(), 0f))
 
-            if ((touchY - centerY()).absoluteValue > 1f) {
-                y += touchY.compareTo(centerY()) * TOUCH_PADDLE_SPEED * delta
-                y = y.coerceIn(0f, SCREEN_HEIGHT - height)
+            if ((touch.y - body.position.y * PPM).absoluteValue > PADDLE_MOVE_THRESHOLD) {
+                val sign = touch.y.compareTo(body.position.y * PPM)
+                body.setLinearVelocity(0f, TOUCH_PADDLE_SPEED * sign)
+            } else {
+                body.setLinearVelocity(0f, 0f)
             }
+        } else {
+            body.setLinearVelocity(0f, 0f)
         }
     }
+
 }

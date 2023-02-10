@@ -1,44 +1,85 @@
 package dev.southcity.pong
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
-import kotlin.math.absoluteValue
+import com.badlogic.gdx.physics.box2d.Body
+import com.badlogic.gdx.physics.box2d.BodyDef
+import com.badlogic.gdx.physics.box2d.FixtureDef
+import com.badlogic.gdx.physics.box2d.PolygonShape
+import com.badlogic.gdx.physics.box2d.World
 import kotlin.random.Random
 
-class Ball : Rectangle(SCREEN_WIDTH / 2 - BALL_SIZE / 2, SCREEN_HEIGHT / 2 - BALL_SIZE / 2, BALL_SIZE, BALL_SIZE) {
-    var velocity: Vector2 = Vector2(
-        Random.nextInt().toFloat() * if (Random.nextBoolean()) 1 else -1,
-        Random.nextInt().toFloat() * 0.5f * if (Random.nextBoolean()) 1 else -1,
-    ).setLength(BALL_SPEED)
+class Ball(world: World) {
 
-    var timeAlive: Float = 0f
+    private val body: Body
+
+    private var timeAlive: Float = 0f
+
+    init {
+        val bDef = BodyDef().apply {
+            type = BodyDef.BodyType.DynamicBody
+            fixedRotation = true
+        }
+
+        body = world.createBody(bDef)
+
+        val box = PolygonShape()
+        box.setAsBox(BALL_SIZE / 2 / PPM, BALL_SIZE / 2 / PPM)
+
+        val fDef = FixtureDef().apply {
+            shape = box
+            density = 0f
+            friction = 0f
+            restitution = 1f
+        }
+
+        body.createFixture(fDef)
+
+        box.dispose()
+
+        reset()
+    }
+
+    fun reset() {
+        timeAlive = 0f
+        body.setTransform(SCREEN_WIDTH / 2 / PPM, SCREEN_HEIGHT / 2 / PPM, 0f)
+        val floatX = floatArrayOf(-1f, 1f).random() // prevent infinite bouncing by excluding zero
+        val floatY = floatArrayOf(-1f, 1f).random()
+        body.linearVelocity = Vector2(floatX, floatY).setLength(BALL_SPEED)
+    }
+
+    fun distanceVector(point: Vector2): Vector2 {
+        return Vector2(
+            point.x - body.position.x,
+            point.y - body.position.y,
+        )
+    }
+
+    fun getPositionPixels(): Vector2 {
+        return Vector2(
+            body.position.x * PPM,
+            body.position.y * PPM,
+        )
+    }
+
+    fun getDirection(): Vector2 {
+        return body.linearVelocity
+    }
 
     fun update(delta: Float) {
         timeAlive += delta
 
-        velocity.setLength(velocity.len() + timeAlive * BALL_SPEED_MODIFIER)
+        body.linearVelocity = body.linearVelocity.setLength(BALL_SPEED + timeAlive * BALL_SPEED_MODIFIER)
 
-        x += velocity.x * delta
-        y += velocity.y * delta
-
-        if (y < 0f || y > SCREEN_HEIGHT - BALL_SIZE) {
-            y = y.coerceIn(0f, SCREEN_HEIGHT - BALL_SIZE)
-            velocity.y *= -1
-        }
-
-        // prevent soft lock
-        if (velocity.x < 0.00001 && velocity.x > -0.00001) {
-            velocity.x = 1f
-        }
-
-        // speed up if too slow
-        if (velocity.x.absoluteValue < 16f) {
-            velocity.x *= 1.25f
-        }
+        println(body.linearVelocity.len())
     }
 
     fun draw(shapeRenderer: ShapeRenderer) {
-        shapeRenderer.rect(x, y, width, height)
+        shapeRenderer.rect(
+            body.position.x * PPM - BALL_SIZE / 2,
+            body.position.y * PPM - BALL_SIZE / 2,
+            BALL_SIZE,
+            BALL_SIZE,
+        )
     }
 }

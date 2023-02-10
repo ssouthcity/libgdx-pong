@@ -1,73 +1,74 @@
 package dev.southcity.pong.screens
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.Intersector
-import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.physics.box2d.BodyDef
+import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer
+import com.badlogic.gdx.physics.box2d.EdgeShape
+import com.badlogic.gdx.physics.box2d.FixtureDef
+import com.badlogic.gdx.physics.box2d.World
 import com.badlogic.gdx.utils.ScreenUtils
 import dev.southcity.pong.*
 
 class PlayScreen(private val game: PongGame) : Screen {
-    lateinit var ball: Ball
-    lateinit var playerPaddle: TouchPaddle
-    lateinit var opponentPaddle: BotPaddle
 
-    var playerScore = 0
-    var opponentScore = 0
+    private val b2dr = Box2DDebugRenderer()
 
-    private fun spawnBall() {
-        ball = Ball()
+    private val world = World(Vector2.Zero, true)
+
+    private val ball = Ball(world)
+
+    private val playerPaddle = TouchPaddle(world, game.camera)
+
+    private val opponentPaddle = BotPaddle(world)
+
+    private var playerScore = 0
+    private var opponentScore = 0
+
+    private var accumulator: Float = 0f
+
+    init {
+        spawnWalls()
         opponentPaddle.trackBall(ball)
     }
 
-    private fun collide(paddle: Paddle, ball: Ball) {
-        val collisionVec = Vector2(
-            ball.x - paddle.centerX(),
-            ball.y - paddle.centerY(),
-        ).setLength(1f)
+    private fun spawnWalls() {
+        val body = world.createBody(BodyDef())
 
-        val inboundDirection = Vector2(
-            ball.velocity.x,
-            ball.velocity.y,
-        ).setLength(1f)
+        val edge = EdgeShape()
+        // top
+        edge.set(0f, SCREEN_HEIGHT / PPM, SCREEN_WIDTH / PPM, SCREEN_HEIGHT / PPM)
+        body.createFixture(edge, 5f)
+        // bottom
+        edge.set(0f, 0f, SCREEN_WIDTH / PPM, 0f)
+        body.createFixture(edge, 5f)
 
-        while (ball.overlaps(paddle)) {
-            ball.x += inboundDirection.x * -1
-            ball.y += inboundDirection.y * -1
-        }
-
-        val oldSpeed = ball.velocity.len()
-
-        collisionVec.setLength(oldSpeed)
-        ball.velocity.x *= -1
-        ball.velocity = ball.velocity.lerp(collisionVec, 0.5f).setLength(oldSpeed)
+        edge.dispose()
     }
 
     private fun update(delta: Float) {
-        ball.update(delta)
-        playerPaddle.update(delta)
-        opponentPaddle.update(delta)
+        accumulator += delta
 
-        if (playerPaddle.overlaps(ball)) {
-            collide(playerPaddle, ball)
+        while (accumulator >= FRAME_RATE) {
+            ball.update(delta)
+            playerPaddle.update(delta)
+            opponentPaddle.update(delta)
+
+            world.step(FRAME_RATE, 6, 2)
+
+            accumulator -= FRAME_RATE
         }
 
-        if (opponentPaddle.overlaps(ball)) {
-            collide(opponentPaddle, ball)
-        }
-
-        if (ball.x < -ball.width) {
+        val ballPos = ball.getPositionPixels()
+        if (ballPos.x < 0f) {
             opponentScore++
-            spawnBall()
-        }
-
-        if (ball.x > SCREEN_WIDTH) {
+            ball.reset()
+        } else if (ballPos.x > SCREEN_WIDTH) {
             playerScore++
-            spawnBall()
+            ball.reset()
         }
 
         if (playerScore >= WINNING_SCORE) {
@@ -77,25 +78,22 @@ class PlayScreen(private val game: PongGame) : Screen {
         }
     }
 
-    override fun show() {
-        playerPaddle = TouchPaddle(game.camera)
-        opponentPaddle = BotPaddle()
-        spawnBall()
-    }
-
     override fun render(delta: Float) {
         update(delta)
 
         ScreenUtils.clear(Color.BLACK)
 
+        val layout = GlyphLayout(game.font, "")
+
         game.batch.begin()
         game.batch.projectionMatrix = game.camera.combined
         game.font.data.setScale(2f)
-        val layout = GlyphLayout(game.font, playerScore.toString())
+        layout.setText(game.font, playerScore.toString())
         game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
         layout.setText(game.font, opponentScore.toString())
         game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 * 3 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
         game.batch.end()
+
 
         game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         game.shapeRenderer.projectionMatrix = game.camera.combined
@@ -103,12 +101,18 @@ class PlayScreen(private val game: PongGame) : Screen {
         playerPaddle.draw(game.shapeRenderer)
         opponentPaddle.draw(game.shapeRenderer)
         game.shapeRenderer.end()
+
+        b2dr.render(world, game.camera.combined)
+    }
+
+    override fun dispose() {
+        world.dispose()
+        b2dr.dispose()
     }
 
     override fun resize(width: Int, height: Int) {}
     override fun pause() {}
     override fun resume() {}
+    override fun show() {}
     override fun hide() {}
-    override fun dispose() {}
-
 }

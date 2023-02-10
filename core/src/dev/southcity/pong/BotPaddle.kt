@@ -1,20 +1,28 @@
 package dev.southcity.pong
 
+import com.badlogic.gdx.physics.box2d.World
 import kotlin.math.absoluteValue
+import kotlin.math.sign
 
-const val BOT_PADDLE_SPEED = 64f
-
-class BotPaddle() : Paddle(SCREEN_WIDTH - PADDLE_WIDTH - PADDLE_MARGIN, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2) {
+class BotPaddle(world: World) : Paddle(world) {
     private lateinit var ball: Ball
+
+    init {
+        body.setTransform(SCREEN_WIDTH / PPM - PADDLE_MARGIN / PPM, SCREEN_HEIGHT / 2 / PPM, 0f)
+    }
 
     fun trackBall(ball: Ball) {
         this.ball = ball
     }
 
     override fun update(delta: Float) {
-        if ((ball.y - centerY()).absoluteValue > 1f) {
-            y += BOT_PADDLE_SPEED * ball.y.compareTo(centerY()) * delta
-            y = y.coerceIn(0f, SCREEN_HEIGHT - height)
+        val distanceToBall = ball.distanceVector(body.position)
+
+        if (ball.getDirection().x > PADDLE_MOVE_THRESHOLD) {
+            val diff = distanceToBall.y.sign * -1
+            body.setLinearVelocity(0f, BOT_PADDLE_SPEED * diff)
+        } else {
+            body.setLinearVelocity(0f, 0f)
         }
     }
 }
