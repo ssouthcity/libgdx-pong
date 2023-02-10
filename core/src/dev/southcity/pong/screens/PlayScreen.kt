@@ -102,7 +102,7 @@ class PlayScreen(private val game: PongGame) : Screen {
         opponentPaddle.draw(game.shapeRenderer)
         game.shapeRenderer.end()
 
-        b2dr.render(world, game.camera.combined)
+        b2dr.render(world, game.camera.combined.cpy().scale(PPM, PPM, 1f))
     }
 
     override fun dispose() {

@@ -18,7 +18,7 @@ class BotPaddle(world: World) : Paddle(world) {
     override fun update(delta: Float) {
         val distanceToBall = ball.distanceVector(body.position)
 
-        if (ball.getDirection().x > PADDLE_MOVE_THRESHOLD) {
+        if (ball.getDirection().x > 0f && (distanceToBall.y * PPM).absoluteValue > PADDLE_MOVE_THRESHOLD) {
             val diff = distanceToBall.y.sign * -1
             body.setLinearVelocity(0f, BOT_PADDLE_SPEED * diff)
         } else {
