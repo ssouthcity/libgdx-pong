@@ -8,17 +8,17 @@ import com.badlogic.gdx.physics.box2d.World
 import dev.southcity.pong.FRAME_RATE
 import dev.southcity.pong.PPM
 import dev.southcity.pong.components.BodyComponent
-import dev.southcity.pong.components.TransformComponent
+import dev.southcity.pong.components.SpriteComponent
 
 class PhysicsSystem(
     private val world: World
 ) : IteratingSystem(Family.all(
     BodyComponent::class.java,
-    TransformComponent::class.java,
+    SpriteComponent::class.java,
 ).get()) {
 
     private val bodyMapper = ComponentMapper.getFor(BodyComponent::class.java)
-    private val transformMapper = ComponentMapper.getFor(TransformComponent::class.java)
+    private val transformMapper = ComponentMapper.getFor(SpriteComponent::class.java)
 
     private var accumulator = 0f
 

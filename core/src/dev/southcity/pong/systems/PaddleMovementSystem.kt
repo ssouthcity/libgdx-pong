@@ -6,7 +6,7 @@ import com.badlogic.ashley.core.Family
 import com.badlogic.ashley.systems.IteratingSystem
 import com.badlogic.gdx.math.Vector2
 import dev.southcity.pong.PPM
-import dev.southcity.pong.TOUCH_PADDLE_SPEED
+import dev.southcity.pong.PADDLE_SPEED
 import dev.southcity.pong.components.BodyComponent
 import dev.southcity.pong.components.TargetComponent
 
@@ -24,6 +24,6 @@ class PaddleMovementSystem : IteratingSystem(Family.all(
 
         val direction = target.finder.directionalVectorFrom(body.body.position.y * PPM)
 
-        body.body.linearVelocity = Vector2(0f, direction).setLength(TOUCH_PADDLE_SPEED)
+        body.body.linearVelocity = Vector2(0f, direction).setLength(PADDLE_SPEED)
     }
 }
