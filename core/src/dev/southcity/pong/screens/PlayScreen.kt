@@ -1,43 +1,144 @@
 package dev.southcity.pong.screens
 
+import com.badlogic.ashley.core.Entity
+import com.badlogic.ashley.core.PooledEngine
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.g2d.GlyphLayout
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.physics.box2d.BodyDef
-import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer
-import com.badlogic.gdx.physics.box2d.EdgeShape
-import com.badlogic.gdx.physics.box2d.World
+import com.badlogic.gdx.physics.box2d.*
 import com.badlogic.gdx.utils.ScreenUtils
 import dev.southcity.pong.*
+import dev.southcity.pong.components.BodyComponent
+import dev.southcity.pong.components.SpeedModifierComponent
+import dev.southcity.pong.components.TargetComponent
+import dev.southcity.pong.transformers.GrowingTransformer
+import dev.southcity.pong.components.TransformComponent
+import dev.southcity.pong.systems.PaddleMovementSystem
+import dev.southcity.pong.systems.PhysicsSystem
+import dev.southcity.pong.systems.ScoreboardSystem
+import dev.southcity.pong.systems.SpeedTransformerSystem
+import dev.southcity.pong.targeting.BodyTargetFinder
+import dev.southcity.pong.targeting.TouchTargetFinder
+import dev.southcity.pong.transformers.SlowMotionTransformer
 
 class PlayScreen(private val game: PongGame) : Screen {
 
-    private val b2dr = Box2DDebugRenderer()
-
     private val world = World(Vector2.Zero, true)
 
-    private val ball = Ball(world)
+    private val engine = PooledEngine()
 
-    private val playerPaddle = TouchPaddle(world)
-
-    private val opponentPaddle = BotPaddle(world)
-
-    private var playerScore = 0
-    private var opponentScore = 0
-
-    private var accumulator: Float = 0f
+    private val b2dr = Box2DDebugRenderer()
 
     init {
         spawnWalls()
-        opponentPaddle.trackBall(ball)
+
+        val ballBody = createBallBody()
+        engine.addEntity(createBall(ballBody))
+        engine.addEntity(createPlayerPaddle())
+        engine.addEntity(createOpponentPaddle(ballBody))
+
+        engine.addSystem(PhysicsSystem(world))
+        engine.addSystem(PaddleMovementSystem())
+        engine.addSystem(SpeedTransformerSystem()) // has to run after velocities have been set
+
+        val scoreboardSystem = ScoreboardSystem(game.batch, game.font)
+        world.setContactListener(scoreboardSystem)
+        engine.addSystem(scoreboardSystem)
+    }
+
+    private fun createOpponentPaddle(ball: Body): Entity {
+        val body = createPaddleBody(SCREEN_WIDTH / PPM - PADDLE_MARGIN / PPM, SCREEN_HEIGHT / 2 / PPM)
+        val entity = createPaddle(body)
+        entity.add(TargetComponent(BodyTargetFinder(ball)))
+
+        return entity
+    }
+
+    private fun createPlayerPaddle(): Entity {
+        val body = createPaddleBody(PADDLE_MARGIN / PPM, SCREEN_HEIGHT / 2 / PPM)
+        val entity = createPaddle(body)
+        entity.add(TargetComponent(TouchTargetFinder()))
+
+        return entity
+    }
+
+    private fun createPaddle(body: Body): Entity {
+        val entity = engine.createEntity()
+        entity.add(BodyComponent(body))
+        entity.add(TransformComponent())
+        return entity
+    }
+
+    private fun createPaddleBody(x: Float, y: Float): Body {
+        val bDef = BodyDef().apply {
+            type = BodyDef.BodyType.KinematicBody
+            position.set(x, y)
+            fixedRotation = true
+        }
+
+        val body = world.createBody(bDef)
+
+        val box = PolygonShape()
+        box.setAsBox(PADDLE_WIDTH / 2 / PPM, PADDLE_HEIGHT / 2 / PPM)
+
+        val fDef = FixtureDef().apply {
+            shape = box
+            density = 0f
+            friction = 0f
+            restitution = 1f
+        }
+
+        body.createFixture(fDef)
+
+        box.dispose()
+
+        return body
+    }
+
+    private fun createBall(body: Body): Entity {
+        val entity = engine.createEntity()
+        entity.add(BodyComponent(body))
+        entity.add(TransformComponent())
+
+        val speedModifierComponent = SpeedModifierComponent()
+        speedModifierComponent.addTransformer(GrowingTransformer())
+        speedModifierComponent.addTransformer(SlowMotionTransformer())
+        entity.add(speedModifierComponent)
+
+        return entity
+    }
+
+    private fun createBallBody(): Body {
+        val bDef = BodyDef().apply {
+            type = BodyDef.BodyType.DynamicBody
+            fixedRotation = true
+            position.set(SCREEN_WIDTH / 2 / PPM, SCREEN_HEIGHT / 2 / PPM)
+            linearVelocity.set(1f, 1f).setLength(BALL_SPEED)
+        }
+
+        val body = world.createBody(bDef)
+
+        val box = PolygonShape()
+        box.setAsBox(BALL_SIZE / 2 / PPM, BALL_SIZE / 2 / PPM)
+
+        val fDef = FixtureDef().apply {
+            shape = box
+            density = 0f
+            friction = 0f
+            restitution = 1f
+        }
+
+        body.createFixture(fDef)
+
+        box.dispose()
+
+        return body
     }
 
     private fun spawnWalls() {
-        val body = world.createBody(BodyDef())
-
         val edge = EdgeShape()
+
+        val body = world.createBody(BodyDef())
         // top
         edge.set(0f, SCREEN_HEIGHT / PPM, SCREEN_WIDTH / PPM, SCREEN_HEIGHT / PPM)
         body.createFixture(edge, 5f)
@@ -45,61 +146,23 @@ class PlayScreen(private val game: PongGame) : Screen {
         edge.set(0f, 0f, SCREEN_WIDTH / PPM, 0f)
         body.createFixture(edge, 5f)
 
+        val playerGoal = world.createBody(BodyDef())
+        playerGoal.userData = Goal.Player
+        edge.set(0f, 0f, 0f, SCREEN_HEIGHT / PPM)
+        playerGoal.createFixture(edge, 0f)
+
+        val enemyGoal = world.createBody(BodyDef())
+        enemyGoal.userData = Goal.Opponent
+        edge.set(SCREEN_WIDTH / PPM, 0f, SCREEN_WIDTH / PPM, SCREEN_HEIGHT / PPM)
+        enemyGoal.createFixture(edge, 0f)
+
         edge.dispose()
     }
 
-    private fun update(delta: Float) {
-        accumulator += delta
-
-        while (accumulator >= FRAME_RATE) {
-            ball.update(delta)
-            playerPaddle.update(delta)
-            opponentPaddle.update(delta)
-
-            world.step(FRAME_RATE, 6, 2)
-
-            accumulator -= FRAME_RATE
-        }
-
-        val ballPos = ball.getPositionPixels()
-        if (ballPos.x < 0f) {
-            opponentScore++
-            ball.reset()
-        } else if (ballPos.x > SCREEN_WIDTH) {
-            playerScore++
-            ball.reset()
-        }
-
-        if (playerScore >= WINNING_SCORE) {
-            game.screen = IntermediaryScreen(game, "You won!!!!")
-        } else if (opponentScore >= WINNING_SCORE) {
-            game.screen = IntermediaryScreen(game, "You lose :(((")
-        }
-    }
-
     override fun render(delta: Float) {
-        update(delta)
-
         ScreenUtils.clear(Color.BLACK)
 
-        val layout = GlyphLayout(game.font, "")
-
-        game.batch.begin()
-        game.batch.projectionMatrix = Cameras.Game.combined
-        game.font.data.setScale(2f)
-        layout.setText(game.font, playerScore.toString())
-        game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
-        layout.setText(game.font, opponentScore.toString())
-        game.font.draw(game.batch, layout, SCREEN_WIDTH / 4 * 3 - layout.width / 2, SCREEN_HEIGHT / 2 + layout.height / 2)
-        game.batch.end()
-
-
-        game.shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        game.shapeRenderer.projectionMatrix = Cameras.Game.combined
-        ball.draw(game.shapeRenderer)
-        playerPaddle.draw(game.shapeRenderer)
-        opponentPaddle.draw(game.shapeRenderer)
-        game.shapeRenderer.end()
+        engine.update(delta)
 
         b2dr.render(world, Cameras.Box2DDebug.combined)
     }
