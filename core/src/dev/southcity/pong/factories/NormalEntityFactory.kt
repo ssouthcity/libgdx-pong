@@ -24,8 +24,8 @@ class NormalEntityFactory(engine: Engine, world: World) : EntityFactory(engine, 
         entity.add(SpriteComponent(Vector2(BALL_SIZE, BALL_SIZE)))
 
         val speedModifierComponent = SpeedModifierComponent().apply {
-            addTransformer(GrowingTransformer())
-            addTransformer(SlowMotionTransformer())
+            pipe.addTransformer(GrowingTransformer())
+            pipe.addTransformer(SlowMotionTransformer())
         }
         entity.add(speedModifierComponent)
 
@@ -50,7 +50,7 @@ class NormalEntityFactory(engine: Engine, world: World) : EntityFactory(engine, 
         val entity = createPaddle(body)
         entity.add(TargetComponent(BodyTargetFinder(ballBody)))
         entity.add(SpeedModifierComponent().apply {
-            addTransformer(ConstantTransformer(0.8f))
+            pipe.addTransformer(ConstantTransformer(0.8f))
         })
 
         return entity

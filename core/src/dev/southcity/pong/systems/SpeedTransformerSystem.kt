@@ -20,9 +20,9 @@ class SpeedTransformerSystem : IteratingSystem(Family.all(
         val body = bodyMapper.get(entity)
         val speedModifier = speedModifierMapper.get(entity)
 
-        speedModifier.removeExpiredTransformers()
+        speedModifier.pipe.removeExpiredTransformers()
 
-        val factor = speedModifier.modify(deltaTime, 1f)
+        val factor = speedModifier.pipe.modify(deltaTime, 1f)
         body.body.linearVelocity = body.body.linearVelocity.setLength(BALL_SPEED * factor)
     }
 }
